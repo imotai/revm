@@ -161,6 +161,7 @@ where
 
         // ExtDelegateCall is not allowed to call non-EOF contracts.
         if is_ext_delegate_call && !bytecode.bytes_slice().starts_with(&EOF_MAGIC_BYTES) {
+            context.journal().checkpoint_revert(checkpoint);
             return return_result(InstructionResult::InvalidExtDelegateCallTarget);
         }
 
@@ -514,14 +515,6 @@ where
 
         memory.borrow_mut().new_context();
         Self::init_with_context(0, frame_input, memory, context, frame_context)
-    }
-
-    fn final_return(
-        _context: &mut Self::Context,
-        _frame_context: &mut Self::FrameContext,
-        _result: &mut Self::FrameResult,
-    ) -> Result<(), Self::Error> {
-        Ok(())
     }
 
     fn init(

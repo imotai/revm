@@ -266,20 +266,15 @@ where
             .handler
             .frame_init_first(context, frame_context, frame_input);
 
-        match &mut ret {
-            Ok(ItemOrResult::Result(res)) => {
-                context.frame_end(res);
-            }
-            Ok(ItemOrResult::Item(frame)) => {
-                context.initialize_interp(frame.interpreter());
-            }
-            _ => (),
+        // only if new frame is created call initialize_interp hook.
+        if let Ok(ItemOrResult::Item(frame)) = &mut ret {
+            context.initialize_interp(frame.interpreter());
         }
         ret
     }
 
     fn frame_init(
-        &self,
+        &mut self,
         frame: &Self::Frame,
         context: &mut Self::Context,
         frame_context: &mut <<Self as EthHandler>::Frame as Frame>::FrameContext,
@@ -297,14 +292,10 @@ where
         let mut ret = self
             .handler
             .frame_init(frame, context, frame_context, frame_input);
-        match &mut ret {
-            Ok(ItemOrResult::Result(res)) => {
-                context.frame_end(res);
-            }
-            Ok(ItemOrResult::Item(frame)) => {
-                context.initialize_interp(frame.interpreter());
-            }
-            _ => (),
+
+        // only if new frame is created call initialize_interp hook.
+        if let Ok(ItemOrResult::Item(frame)) = &mut ret {
+            context.initialize_interp(frame.interpreter());
         }
         ret
     }
@@ -321,12 +312,14 @@ where
             .frame_return_result(frame, context, frame_context, result)
     }
 
-    fn frame_final_return(
+    fn last_frame_result(
+        &self,
         context: &mut Self::Context,
-        _frame_context: &mut <<Self as EthHandler>::Frame as Frame>::FrameContext,
-        result: &mut <<Self as EthHandler>::Frame as Frame>::FrameResult,
+        frame_context: &mut <Self::Frame as Frame>::FrameContext,
+        frame_result: &mut <Self::Frame as Frame>::FrameResult,
     ) -> Result<(), Self::Error> {
-        context.frame_end(result);
-        Ok(())
+        context.frame_end(frame_result);
+        self.handler
+            .last_frame_result(context, frame_context, frame_result)
     }
 }

@@ -1,8 +1,8 @@
 use crate::{
     api::exec_op::transact_op,
     transaction::{abstraction::OpTxGetter, OpTxTrait},
-    L1BlockInfo, L1BlockInfoGetter, OpSpec, OpSpecId, OpTransaction, OpTransactionError,
-    OptimismHaltReason,
+    L1BlockInfo, L1BlockInfoGetter, OpHaltReason, OpSpec, OpSpecId, OpTransaction,
+    OpTransactionError,
 };
 use derive_more::derive::{AsMut, AsRef, Deref, DerefMut};
 use inspector::journal::{JournalExt, JournalExtGetter};
@@ -38,7 +38,7 @@ impl Default for OpContext {
         Self(
             Context::default()
                 .with_tx(OpTransaction::default())
-                .with_cfg(CfgEnv::default().with_spec(OpSpec::Op(OpSpecId::BEDROCK)))
+                .with_cfg(CfgEnv::new().with_spec(OpSpec::Op(OpSpecId::BEDROCK)))
                 .with_chain(L1BlockInfo::default()),
         )
     }
@@ -55,7 +55,7 @@ impl OpContext {
     > {
         Context::default()
             .with_tx(OpTransaction::default())
-            .with_cfg(CfgEnv::default().with_spec(OpSpec::Op(OpSpecId::BEDROCK)))
+            .with_cfg(CfgEnv::new().with_spec(OpSpec::Op(OpSpecId::BEDROCK)))
             .with_chain(L1BlockInfo::default())
     }
 }
@@ -240,10 +240,8 @@ where
     DB: Database,
     JOURNAL: Journal<Database = DB, FinalOutput = (EvmState, Vec<Log>)>,
 {
-    type Output = Result<
-        ResultAndState<OptimismHaltReason>,
-        EVMError<<DB as Database>::Error, OpTransactionError>,
-    >;
+    type Output =
+        Result<ResultAndState<OpHaltReason>, EVMError<<DB as Database>::Error, OpTransactionError>>;
 
     fn exec_previous(&mut self) -> Self::Output {
         transact_op(self)
@@ -259,7 +257,7 @@ where
     JOURNAL: Journal<Database = DB, FinalOutput = (EvmState, Vec<Log>)>,
 {
     type CommitOutput = Result<
-        ExecutionResult<OptimismHaltReason>,
+        ExecutionResult<OpHaltReason>,
         EVMError<<DB as Database>::Error, OpTransactionError>,
     >;
 
