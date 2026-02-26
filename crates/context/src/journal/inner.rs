@@ -214,13 +214,34 @@ impl<ENTRY: JournalEntryTr> JournalInner<ENTRY> {
             warm_addresses,
             selfdestructed_addresses,
         } = self;
-        // Cfg is not changed. It is always set again before execution.
-        let _ = cfg;
         // Clear coinbase address warming for next tx
         warm_addresses.clear_coinbase_and_access_list();
         selfdestructed_addresses.clear();
 
-        let state = mem::take(state);
+        let mut state = mem::take(state);
+
+        // Pre-EIP-161 normalization: adjust empty touched accounts so the database
+        // layer can always apply post-EIP-161 commit semantics (destroy empty touched
+        // accounts). For pre-Spurious Dragon blocks, we prevent destruction by either
+        // marking the account as created (materialized) or clearing the touched flag.
+        if !cfg.spec.is_enabled_in(SPURIOUS_DRAGON) {
+            for acc in state.values_mut() {
+                if acc.is_touched()
+                    && acc.is_empty()
+                    && !acc.is_selfdestructed()
+                    && !acc.is_created()
+                {
+                    if acc.is_loaded_as_not_existing() {
+                        // Materialize empty account that didn't exist before.
+                        acc.mark_created();
+                    } else {
+                        // Preserve existing empty account, don't let the DB layer destroy it.
+                        acc.unmark_touch();
+                    }
+                }
+            }
+        }
+
         logs.clear();
         transient_storage.clear();
 
