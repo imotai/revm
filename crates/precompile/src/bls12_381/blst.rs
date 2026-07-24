@@ -569,13 +569,13 @@ fn _extract_g2_input(
 ///
 /// Note: The field element is expected to be in big endian format.
 fn read_fp(input: &[u8; FP_LENGTH]) -> Result<blst_fp, PrecompileHalt> {
+    // Performs the check for canonical field elements
     if !is_valid_be(input) {
         return Err(PrecompileHalt::NonCanonicalFp);
     }
     let mut fp = blst_fp::default();
     // SAFETY: `input` has fixed length, and `fp` is a blst value.
     unsafe {
-        // This performs the check for canonical field elements
         blst_fp_from_bendian(&mut fp, input.as_ptr());
     }
 
